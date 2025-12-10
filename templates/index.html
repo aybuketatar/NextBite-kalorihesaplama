@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextBite</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        
+        {% if show_login %}
+        <div id="login-section">
+            <h1>NextBite</h1>
+            <p class="subtitle">Seni tanımamız için bilgilerini girer misin?</p>
+            <form action="/setup" method="POST">
+                <label>Adın:</label> <input type="text" name="name" required>
+                <div class="row-inputs">
+                    <div><label>Yaş:</label> <input type="number" name="age" required></div>
+                    <div><label>Cinsiyet:</label> <select name="gender"><option value="female">Kadın</option><option value="male">Erkek</option></select></div>
+                </div>
+                <div class="row-inputs">
+                    <div><label>Boy (cm):</label> <input type="number" name="height" required></div>
+                    <div><label>Kilo (kg):</label> <input type="number" name="weight" required></div>
+                </div>
+                <label>Hareket:</label>
+                <select name="activity">
+                    <option value="1.2">Masa başı</option>
+                    <option value="1.375">Az Hareketli</option>
+                    <option value="1.55">Orta Hareketli</option>
+                    <option value="1.725">Çok Hareketli</option>
+                </select>
+                <label>Uygulamayı Kullanma Amacı:</label>
+                <select name="goal">
+                    <option value="lose">Kilo Vermek İstiyorum</option>
+                    <option value="maintain">Sadece Formumu Korumak</option>
+                    <option value="gain">Kilo Almak İstiyorum</option>
+                </select>
+                <button type="submit" class="btn-calc">Profilimi Oluştur</button>
+            </form>
+        </div>
+
+        {% else %}
+        <div id="tracker-section">
+            <div class="header-info">
+                <h1>Merhaba {{ user.name }}!</h1>
+                <div class="target-box"> 🎯Boy-kilo endeksine göre günlük alman gereken kalori miktarın: <strong>{{ user.target_calories }} kcal</strong></div>
+                <div style="font-size:0.8rem; margin-top:5px;"><a href="/logout" style="color:#ff7043;">(Çıkış Yap)</a></div>
+            </div>
+            <hr>
+            <p class="subtitle">Bugün neler yedin?</p>
+            <form method="POST" action="/" id="foodForm">
+                <div id="input-container">
+                    <div class="input-row"><input type="text" name="food_input" placeholder="1. Madde (Örn: 2 yumurta)" onkeypress="handleEnter(event, this)" required></div>
+                </div>
+                <button type="submit" class="btn-calc">Analiz Et</button>
+            </form>
+
+            {% if error %} <div class="error">{{ error }}</div> {% endif %}
+
+            {% if total > 0 %}
+            <div class="advice-box">
+                <h3>💡 NextBite Önerisi:</h3>
+                <p>{{ advice }}</p>
+                <div class="progress-info">Alınan: <b>{{ total }}</b> / Hedef: <b>{{ user.target_calories }}</b></div>
+            </div>
+            <table>
+                <thead><tr><th>YİYECEK</th><th style="text-align: right;">KALORİ</th></tr></thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td><div class="item-name">{{ item.name }}</div><div class="nutrition-tags"><span class="tag tag-p">P: {{ item.protein }}</span> <span class="tag tag-c">K: {{ item.carbs }}</span> <span class="tag tag-f">Y: {{ item.fat }}</span></div></td>
+                        <td style="text-align: right; font-weight:bold;">{{ item.calories }} kcal</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row"><td>TOPLAM</td><td style="text-align: right;">{{ total }} kcal</td></tr>
+                </tbody>
+            </table>
+            {% endif %}
+
+            <div class="extra-features">
+                <button onclick="openModal('mealModal')" class="btn-feature btn-meal">🍽️ Bugün Ne Yesem?</button>
+                <button onclick="openModal('sportModal')" class="btn-feature btn-sport">🧘‍♀️ Egzersiz Önerileri</button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div id="mealModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('mealModal')">&times;</span>
+            <h2>👩‍🍳 Şefin Önerisi</h2>
+            <p style="font-size: 0.9rem; color: #666;">Malzemelerini yaz, sana tarif verelim.</p>
+            
+            <label>Bu öğün için kalori hedefin:</label>
+            <input type="number" id="mealCalories" placeholder="Örn: 300">
+            
+            <label>Elindeki Malzemeler:</label>
+            <textarea id="mealIngredients" rows="3" placeholder="Örn: Yulaf, süt, yumurta, peynir..."></textarea>
+            
+            <button onclick="askChef()" class="btn-calc" style="margin-top:10px;">Tarif Bul</button>
+            
+            <div id="chefResult" style="margin-top:15px; background:#f9f9f9; padding:10px; border-radius:10px; display:none; white-space: pre-wrap;"></div>
+        </div>
+    </div>
+
+    <div id="sportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('sportModal')">&times;</span>
+            <h2>🧘‍♀️ 15 Dakika Dinç Kal</h2>
+            <p>Seni yormayacak ama sıkılaştıracak videolar:</p>
+            
+            <div class="video-list">
+                <a href="https://www.youtube.com/results?search_query=ebru+%C5%9Fall%C4%B1+pilates+ba%C5%9Flang%C4%B1%C3%A7" target="_blank" class="video-card">
+                    <b>Ebru Şallı - Pilates Başlangıç</b>
+                    <span>Temel seviye, tüm vücut.</span>
+                </a>
+                <a href="https://www.youtube.com/results?search_query=i%C3%A7+bacak+eritme+10+dakika" target="_blank" class="video-card">
+                    <b>İç Bacak Sıkılaştırma</b>
+                    <span>Evde ekipmansız 10 dakika.</span>
+                </a>
+                <a href="https://www.youtube.com/results?search_query=sabah+esneme+hareketleri" target="_blank" class="video-card">
+                    <b>Sabah Esneme Rutini</b>
+                    <span>Güne enerjik başlamak için.</span>
+                </a>
+                <a href="https://www.youtube.com/results?search_query=evde+y%C3%BCr%C3%BCy%C3%BC%C5%9F+egzersizi" target="_blank" class="video-card">
+                    <b>Evde Yürüyüş (Leslie)</b>
+                    <span>Yağ yakımı için birebir.</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enter tuşu ile kutu açma
+        function handleEnter(event, element) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                const container = document.getElementById('input-container');
+                const count = container.children.length + 1;
+                const newRow = document.createElement('div');
+                newRow.className = 'input-row';
+                newRow.innerHTML = `<input type="text" name="food_input" placeholder="${count}. Madde" onkeypress="handleEnter(event, this)">`;
+                container.appendChild(newRow);
+                newRow.querySelector('input').focus();
+            }
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = "flex"; }
+        function closeModal(id) { document.getElementById(id).style.display = "none"; }
+        
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = "none";
+            }
+        }
+
+        function askChef() {
+            const cals = document.getElementById('mealCalories').value;
+            const ingr = document.getElementById('mealIngredients').value;
+            const resultBox = document.getElementById('chefResult');
+
+            if(!cals || !ingr) { alert("Lütfen kalori ve malzemeleri yazın."); return; }
+
+            resultBox.style.display = "block";
+            resultBox.innerHTML = "👩‍🍳 Şef düşünüyor...";
+
+            fetch('/suggest_meal', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ calories: cals, ingredients: ingr })
+            })
+            .then(response => response.json())
+            .then(data => {
+
+                let formatted = data.result.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                resultBox.innerHTML = formatted;
+            })
+            .catch(err => {
+                resultBox.innerHTML = "Hata oluştu.";
+            });
+        }
+    </script>
+</body>
+</html>

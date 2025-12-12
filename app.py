@@ -1,12 +1,13 @@
 from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 import google.generativeai as genai
 import json
+import os
 
 app = Flask(__name__)
 
 app.secret_key = 'cok_gizli_anahtar_nextbite'
-API_KEY = 'AIzaSyDV8G-qjkWoEHJrjzLl2HxTBjBqxjKmYgw'
-genai.configure(api_key=API_KEY)
+my_key = os.environ.get("GOOGLE_API_KEY")
+genai.configure(api_key=my_key)
 
 active_model_name = 'gemini-1.5-flash'
 try:
